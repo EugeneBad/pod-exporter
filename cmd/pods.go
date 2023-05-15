@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -30,7 +31,7 @@ var (
 	// Initialise the prometheus gauge metric to count recent pods
 	recentPodCount = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "pods_recent_count_total",
+			Name: "pods_recent_count_current",
 			Help: "The total number of pods older or younger than 7 days",
 		},
 		[]string{"valid"},
@@ -51,7 +52,7 @@ func (cset *ClientSet) getPods() (*corev1.PodList, error) {
 
 	}
 
-	// list all pods in the default namespace
+	// list all pods in the defined namespace
 	pods, err := clientset.CoreV1().Pods(cset.namespace).List(cset.context, metav1.ListOptions{})
 	if err != nil {
 		log.Errorf("failed to list pods: %v", err)
@@ -66,9 +67,50 @@ func (cset *ClientSet) countPods() error {
 	if err != nil {
 		return err
 	}
+	var recentPods, oldPods int
 	for _, pod := range pods.Items {
-		fmt.Printf("Pod name: %s\n", pod.Name)
-		fmt.Printf("Pod status: %s\n", pod.Status.Phase)
+		log.WithFields(
+			log.Fields{
+				"pod": pod.Name,
+				"rule_evaluation": []map[string]interface{}{
+					{"name": "image_prefix", "valid": checkImagePrefix(pod)},
+					{"name": "team_label_present", "valid": checkTeamLabel(pod)},
+					{"name": "recent_start_time", "valid": checkStartTime(pod)}},
+			},
+		).Info("pod scrape successful")
+		if checkStartTime(pod) {
+			recentPods++
+		} else {
+			oldPods++
+		}
 	}
+	recentPodCount.WithLabelValues("true").Set(float64(recentPods))
+	recentPodCount.WithLabelValues("false").Set(float64(oldPods))
 	return nil
+}
+
+func checkImagePrefix(pod corev1.Pod) bool {
+	for _, container := range pod.Spec.Containers {
+		imageParts := strings.Split(container.Image, "/")
+		if !(len(imageParts) > 1 && imageParts[0] == "bitnami") {
+			return false
+		}
+	}
+	return true
+}
+
+func checkTeamLabel(pod corev1.Pod) bool {
+	if _, exists := pod.ObjectMeta.Labels["team"]; exists {
+		return true
+	}
+	return false
+}
+
+func checkStartTime(pod corev1.Pod) bool {
+	startTime := pod.ObjectMeta.CreationTimestamp.Time
+	age := time.Since(startTime)
+	if age > (7 * 24 * time.Hour) {
+		return false
+	}
+	return true
 }

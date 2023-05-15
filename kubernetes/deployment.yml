@@ -15,9 +15,10 @@ spec:
       labels:
         app: pod-exporter
     spec:
+      serviceAccountName: pod-exporter
       containers:
       - name: pod-exporter
-        image: eugenebad/pod-exporter:0.0.1a
+        image: eugenebad/pod-exporter:0.0.1b
         resources:
           requests:
             cpu: 20m

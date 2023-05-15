@@ -5,7 +5,7 @@ metadata:
   namespace: pod-exporter
 spec:
   rules:
-  - host: pod-exporter.local
+  - host: localhost
     http:
       paths:
       - path: /
