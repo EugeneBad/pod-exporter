@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-exporter
+  labels:
+    app: pod-exporter
+  namespace: pod-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod-exporter
+  template:
+    metadata:
+      labels:
+        app: pod-exporter
+    spec:
+      containers:
+      - name: pod-exporter
+        image: eugenebad/pod-exporter:0.0.1a
+        resources:
+          requests:
+            cpu: 20m
+            memory: 20Mi
+          limits:
+            cpu: 80m
+            memory: 80Mi
+        ports:
+        - containerPort: 9090
+          name: http

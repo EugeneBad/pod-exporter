@@ -7,11 +7,24 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
 	port string = "9090"
+)
+
+var (
+	// Initialise the prometheus gauge metric to monitor health
+	healthcheck = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "up",
+			Help: "Service healthcheck",
+		},
+		[]string{"valid"},
+	)
 )
 
 func init() {

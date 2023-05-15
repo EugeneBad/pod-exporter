@@ -27,9 +27,9 @@ func NewClientSet(ctx context.Context, namespace string) *ClientSet {
 }
 
 var (
-	// Initialise the prometheus counter metric to count recent pods
-	recentPodCount = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	// Initialise the prometheus gauge metric to count recent pods
+	recentPodCount = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Name: "pods_recent_count_total",
 			Help: "The total number of pods older or younger than 7 days",
 		},

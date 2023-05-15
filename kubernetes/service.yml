@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pod-exporter
+  namespace: pod-exporter
+spec:
+  selector:
+    app: pod-exporter
+  ports:
+  - port: 9090
+    targetPort: 9090
+    name: http

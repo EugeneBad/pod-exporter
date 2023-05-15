@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pod-exporter
+  namespace: pod-exporter
+spec:
+  rules:
+  - host: pod-exporter.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pod-exporter
+            port:
+              number: 9090
