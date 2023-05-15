@@ -39,12 +39,13 @@ var (
 )
 
 func (cset *ClientSet) getPods() (*corev1.PodList, error) {
-	// create a Kubernetes clientset using the default kubeconfig file
+	// read in-cluster a Kubernetes config.
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		log.Errorf("failed to get Kubernetes config: %v", err)
 		return nil, err
 	}
+	// clientset using the incluster config (requires rbac)
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Errorf("failed to create Kubernetes clientset: %v", err)
@@ -67,6 +68,7 @@ func (cset *ClientSet) countPods() error {
 	if err != nil {
 		return err
 	}
+	// initialise pod count
 	var recentPods, oldPods int
 	for _, pod := range pods.Items {
 		log.WithFields(
@@ -78,17 +80,21 @@ func (cset *ClientSet) countPods() error {
 					{"name": "recent_start_time", "valid": checkStartTime(pod)}},
 			},
 		).Info("pod scrape successful")
+		// count pods depending on recency
 		if checkStartTime(pod) {
 			recentPods++
 		} else {
 			oldPods++
 		}
 	}
+	// update prometheus metric
 	recentPodCount.WithLabelValues("true").Set(float64(recentPods))
 	recentPodCount.WithLabelValues("false").Set(float64(oldPods))
 	return nil
 }
 
+// check the prefix on container image name
+// returns false if image name doesn't match for any container in pod
 func checkImagePrefix(pod corev1.Pod) bool {
 	for _, container := range pod.Spec.Containers {
 		imageParts := strings.Split(container.Image, "/")
@@ -108,6 +114,7 @@ func checkTeamLabel(pod corev1.Pod) bool {
 
 func checkStartTime(pod corev1.Pod) bool {
 	startTime := pod.ObjectMeta.CreationTimestamp.Time
+	// resolution in hours
 	age := time.Since(startTime)
 	if age > (7 * 24 * time.Hour) {
 		return false

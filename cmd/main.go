@@ -20,13 +20,19 @@ func init() {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	srv := NewMetricServer(ctx, port)
-	cset := NewClientSet(ctx, "default")
+	// create client set to scrape from all namespaces, leave namespace ""
+	// improve by allowing this to be externally configurable
+	cset := NewClientSet(ctx, "")
 
+	// scrape every pod info every 5 seconds.
+	// improve by allowing this to be externally configurable
 	timer := time.NewTicker(5 * time.Second)
 
-	log.Printf("Application started successfully! Listening on port %s...", port)
+	// Launch metrics server
 	go srv.ListenAndServe()
+	log.Printf("Application started successfully! Listening on port %s...", port)
 
+	// Launch pod scraper
 	go func() {
 		for range timer.C {
 			cset.countPods()
